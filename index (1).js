@@ -32,6 +32,23 @@ async function testAddParking() {
     console.error("Error adding document: ", e);
   }
 }
+האזנה לחניות בזמן אמת (כמו המפה)
+import { query, collection, where, onSnapshot } from "firebase/firestore";
 
+const q = query(
+  collection(db, "parkingSpots"),
+  where("status", "==", "available")
+);
+
+onSnapshot(q, (snapshot) => {
+  snapshot.docs.forEach(doc => updateMapPin(doc.data()));
+});
+// כשחניה מתפנה → Cloud Function שולחת התראה לנהגים בקרבת מקום
+exports.onNewParking = functions.firestore
+  .document("parkingSpots/{spotId}")
+  .onCreate((snap) => {
+    const spot = snap.data();
+    // שלח FCM לנהגים ב-radius של 500 מטר
+  });
 // Run the test
 testAddParking();
