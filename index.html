@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FreeSpot - Find Parking</title>
+    <style>
+        #map { height: 80vh; width: 100%; }
+        .footer-nav { 
+            height: 20vh; display: flex; justify-content: space-around; 
+            align-items: center; background: #f8f8f8;
+        }
+        .report-btn {
+            background-color: #007bff; color: white; padding: 15px 30px;
+            border-radius: 50px; border: none; font-size: 18px; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+
+    <div class="footer-nav">
+        <button onclick="alert('Home clicked')">🏠</button>
+        <button class="report-btn" id="btn-report">Report Parking</button>
+        <button onclick="alert('Profile clicked')">👤</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA8e7VWbr97C9JIwawEPIm9UsSJseAFnVc",
+            authDomain: "parkingapp-4d329.firebaseapp.com",
+            projectId: "parkingapp-4d329",
+            storageBucket: "parkingapp-4d329.firebasestorage.app",
+            messagingSenderId: "203233748891",
+            appId: "1:203233748891:web:d246df2a9831bb4d29e33e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // פונקציה לטעינת המרקרים
+      async function loadParkingMarkers(map) {
+            console.log("--- מתחיל משיכת נתונים מ-Firebase ---");
+            try {
+                const querySnapshot = await getDocs(collection(db, "parking_spots"));
+                console.log("מספר מסמכים שחזרו מהענן:", querySnapshot.size);
+
+                if (querySnapshot.empty) {
+                    console.warn("שימי לב: ה-Collection ריק או ששם התיקייה ב-Firebase לא תואם ל-parking_spots");
+                }
+
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    console.log("בודק מסמך מזהה:", doc.id, "נתונים:", data);
+
+                    // וידוא קיום מיקום בפורמט הנכון
+                    const lat = data.location?.latitude || data.location?.lat;
+                    const lng = data.location?.longitude || data.location?.lng;
+
+                    if (lat && lng) {
+                        console.log(`מצייר מרקר במיקום: ${lat}, ${lng}`);
+                        
+                        new google.maps.Marker({
+                            position: { lat: parseFloat(lat), lng: parseFloat(lng) },
+                            map: map,
+                            title: data.address || "חניה ללא כתובת",
+                            // השארתי את זה בלי icon כדי להשתמש בסיכה האדומה הרגילה
+                        });
+                    } else {
+                        console.error("שגיאה: למסמך הזה חסר שדה location תקין (latitude/longitude)", data);
+                    }
+                });
+                
+                console.log("--- סיום תהליך ציור המרקרים ---");
+
+            } catch (error) {
+                console.error("שגיאה קריטית בגישה ל-Firebase:", error);
+            }
+        }
+
+        // הגדרת initMap כך שגוגל תוכל לראות אותה
+        window.initMap = function() {
+            const telAviv = { lat: 32.0853, lng: 34.7818 };
+            const map = new google.maps.Map(document.getElementById("map"), {
+                zoom: 14,
+                center: telAviv,
+            });
+            loadParkingMarkers(map);
+        };
+
+        // כפתור הדיווח
+        document.getElementById('btn-report').addEventListener('click', async () => {
+            try {
+                await addDoc(collection(db, "parking_spots"), {
+                    address: "חניה חדשה",
+                    location: { latitude: 32.0853, longitude: 34.7818 },
+                    status: "available",
+                    reportedAt: new Date()
+                });
+                alert("דווח בהצלחה!");
+                location.reload();
+            } catch (e) {
+                alert("שגיאה בדיווח");
+            }
+        });
+    </script>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAGy4GGQG8hzSSwuZWqNf2ekMhCBTg83qY"></script>
+
+<script>
+    // הפונקציה הזו רצה מיד כשהדף מוכן ומפעילה ידנית את המפה
+    window.onload = function() {
+        if (typeof initMap === 'function') {
+            initMap();
+        } else {
+            // אם initMap עוד לא נטענה בגלל פיירבייס, ננסה שוב בעוד חצי שנייה
+            setTimeout(initMap, 500);
+        }
+    };
+</script>
+</body>
+</html>
