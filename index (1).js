@@ -52,3 +52,25 @@ exports.onNewParking = functions.firestore
   });
 // Run the test
 testAddParking();
+document.getElementById('btn-search').addEventListener('click', async () => {
+    navigator.geolocation.getCurrentPosition(async (position) => {
+        try {
+            await addDoc(collection(db, "parking_requests"), {
+                userId: "demo_user_1",
+                targetLocation: {
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude
+                },
+                radius: 500,
+                isPremium: false,
+                active: true,
+                createdAt: new Date()
+            });
+
+            alert("החיפוש נשמר! תקבלי התראה אם תימצא חניה באזור");
+        } catch (e) {
+            alert("שגיאה בשמירת החיפוש");
+            console.error(e);
+        }
+    });
+});
